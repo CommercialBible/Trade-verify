@@ -6,7 +6,7 @@
     <title>Certificate Verification - The Commercial Bible</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase JS SDK (Browser Compatible CDN) -->
+    <!-- Firebase JS SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
@@ -20,7 +20,8 @@
         <!-- Search Box -->
         <div id="search-box" class="mb-6 flex gap-2">
             <input type="text" id="manual-cert-id" placeholder="Enter Certificate ID (e.g. TCB-1001)" 
-                   class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 text-sm">
+                   class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 text-sm"
+                   onkeypress="if(event.key === 'Enter') handleManualSearch()">
             <button id="search-btn" onclick="handleManualSearch()"
                     class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition">
                 Verify
@@ -49,7 +50,6 @@
     </div>
 
     <script>
-        // আপনার দেওয়ারিয়া অরিজিনাল ফায়ারবেস কনফিগারেশন
         const firebaseConfig = {
             apiKey: "AIzaSyATmCaFIbsPv8K0GayA594WbVOl3-Tcsoo",
             authDomain: "commercial-bible-learning.firebaseapp.com",
@@ -60,14 +60,16 @@
             measurementId: "G-Y1WGQ9PMJZ"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        firebase.analytics();
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            firebase.analytics();
+        }
         const db = firebase.firestore();
 
         async function verifyCertificate(targetId) {
             if (!targetId) return;
 
+            const cleanId = targetId.trim();
             const loadingEl = document.getElementById('loading');
             const resultEl = document.getElementById('result-container');
             const errorEl = document.getElementById('error-container');
@@ -77,14 +79,13 @@
             errorEl.classList.add('hidden');
 
             try {
-                // Firestore-এর 'certificates' কালেকশন থেকে অনুসন্ধান
-                const docRef = await db.collection("certificates").doc(targetId.trim()).get();
+                const docRef = await db.collection("certificates").doc(cleanId).get();
 
                 loadingEl.classList.add('hidden');
 
                 if (docRef.exists) {
                     const data = docRef.data();
-                    document.getElementById('cert-id').innerText = targetId.trim();
+                    document.getElementById('cert-id').innerText = data.certId || cleanId;
                     document.getElementById('cert-name').innerText = data.userName || "N/A";
                     document.getElementById('cert-course').innerText = data.courseTitle || "N/A";
                     document.getElementById('cert-date').innerText = data.issueDate || "N/A";
@@ -92,7 +93,7 @@
                     resultEl.classList.remove('hidden');
                 } else {
                     errorEl.classList.remove('hidden');
-                    errorEl.innerText = `❌ No certificate found for ID: ${targetId}`;
+                    errorEl.innerText = `❌ No certificate found for ID: ${cleanId}`;
                 }
             } catch (error) {
                 console.error("Verification Error:", error);
@@ -109,7 +110,6 @@
             }
         }
 
-        // URL Parameter চেক করা (যেমন: ?id=TCB-1001)
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const certId = urlParams.get('id');
