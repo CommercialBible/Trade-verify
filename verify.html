@@ -52,7 +52,7 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-analytics.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
-        // আপনার অ্যাপের নতুন Firebase Configuration
+        // আপনার ফায়ারবেস কনফিগারেশন
         const firebaseConfig = {
             apiKey: "AIzaSyATmCaFIbsPv8K0GayA594WbVOl3-Tcsoo",
             authDomain: "commercial-bible-learning.firebaseapp.com",
@@ -68,7 +68,7 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // URL Parameter থেকে ID বের করা
+        // URL Parameter থেকে ID বের করা (যেমন: https://commercialbible.github.io/Trade-verify/?id=TCB-1001)
         const urlParams = new URLSearchParams(window.location.search);
         let certId = urlParams.get('id');
 
@@ -84,7 +84,7 @@
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('search-box').classList.remove('hidden');
                 document.getElementById('error-container').classList.remove('hidden');
-                document.getElementById('error-container').innerText = " Please enter a Certificate ID or use a valid link.";
+                document.getElementById('error-container').innerText = "Please enter a Certificate ID or use a valid link.";
                 return;
             }
 
