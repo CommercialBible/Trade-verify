@@ -6,88 +6,125 @@
     <title>Certificate Verification - The Commercial Bible</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK (Compat version) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
 
     <div class="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-700 text-center">
         <h1 class="text-2xl font-bold mb-2 text-amber-400">The Commercial Bible</h1>
-        <p class="text-sm text-slate-400 mb-6">Official Certificate Verification</p>
+        <p class="text-sm text-slate-400 mb-6">Official Certificate Verification System</p>
 
-        <div id="loading" class="text-slate-300 py-6">Verifying certificate, please wait...</div>
-
-        <div id="result-container" class="hidden text-left space-y-4">
-            <div class="bg-emerald-900/40 border border-emerald-500 text-emerald-300 p-3 rounded-lg text-center font-medium">
-                ✅ Valid & Authentic Certificate
-            </div>
-            <div class="border-t border-slate-700 pt-4 space-y-2 text-sm">
-                <p><span class="text-slate-400">Certificate ID:</span> <span id="cert-id" class="font-mono text-amber-300"></span></p>
-                <p><span class="text-slate-400">Recipient Name:</span> <span id="cert-name" class="font-bold text-lg"></span></p>
-                <p><span class="text-slate-400">Course Title:</span> <span id="cert-course" class="font-semibold text-blue-300"></span></p>
-                <p><span class="text-slate-400">Issue Date:</span> <span id="cert-date"></span></p>
+        <!-- Search Box (Manual Search Option) -->
+        <div id="search-box" class="mb-6 hidden">
+            <div class="flex gap-2">
+                <input type="text" id="manual-cert-id" placeholder="Enter Certificate ID (e.g. TCB-1001)" 
+                       class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 text-sm">
+                <button id="search-btn"
+                        class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition">
+                    Verify
+                </button>
             </div>
         </div>
 
-        <div id="error-container" class="hidden bg-rose-900/40 border border-rose-500 text-rose-300 p-4 rounded-lg">
+        <div id="loading" class="text-slate-300 py-6">Verifying certificate, please wait...</div>
+
+        <!-- Result Section -->
+        <div id="result-container" class="hidden text-left space-y-4">
+            <div class="bg-emerald-900/40 border border-emerald-500 text-emerald-300 p-3 rounded-lg text-center font-medium flex items-center justify-center gap-2">
+                <span>✅</span> Valid & Authentic Certificate
+            </div>
+            <div class="border-t border-slate-700 pt-4 space-y-2 text-sm">
+                <p><span class="text-slate-400">Certificate ID:</span> <span id="cert-id" class="font-mono text-amber-300"></span></p>
+                <p><span class="text-slate-400">Recipient Name:</span> <span id="cert-name" class="font-bold text-lg text-white"></span></p>
+                <p><span class="text-slate-400">Course Title:</span> <span id="cert-course" class="font-semibold text-blue-300"></span></p>
+                <p><span class="text-slate-400">Issue Date:</span> <span id="cert-date" class="text-slate-200"></span></p>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div id="error-container" class="hidden bg-rose-900/40 border border-rose-500 text-rose-300 p-4 rounded-lg text-sm">
             ❌ Invalid Certificate ID or Not Found in Database.
         </div>
     </div>
 
-    <script>
-        // আপনার অরিজিনাল ফায়ারবেস কনফিগারেশন
+    <!-- Firebase v13 Modular SDK Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-analytics.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+        // আপনার অ্যাপের নতুন Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyCShfO9N0vvw_wi4KIpB-fOXg0s4eJKrc",
-            authDomain: "commercial-bible-app.firebaseapp.com",
-            projectId: "commercial-bible-app",
-            storageBucket: "commercial-bible-app.firebasestorage.app",
-            messagingSenderId: "917248966117",
-            appId: "1:917248966117:web:0ad16f2e84837dd021030c",
-            measurementId: "G-G9P4EBEHY2"
+            apiKey: "AIzaSyATmCaFIbsPv8K0GayA594WbVOl3-Tcsoo",
+            authDomain: "commercial-bible-learning.firebaseapp.com",
+            projectId: "commercial-bible-learning",
+            storageBucket: "commercial-bible-learning.firebasestorage.app",
+            messagingSenderId: "781358064342",
+            appId: "1:781358064342:web:f4b2176f00856db867df77",
+            measurementId: "G-Y1WGQ9PMJZ"
         };
 
-        // Firebase Initialize
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // Initialize Firebase & Firestore
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
 
-        // URL থেকে ID বের করা (যেমন: verify.html?id=TCB-2026-IMP-1001)
+        // URL Parameter থেকে ID বের করা
         const urlParams = new URLSearchParams(window.location.search);
-        const certId = urlParams.get('id');
+        let certId = urlParams.get('id');
 
-        async function verifyCertificate() {
-            if (!certId) {
+        async function verifyCertificate(targetId) {
+            const idToSearch = targetId || certId;
+
+            // UI Reset
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('error-container').classList.add('hidden');
+
+            if (!idToSearch) {
                 document.getElementById('loading').classList.add('hidden');
+                document.getElementById('search-box').classList.remove('hidden');
                 document.getElementById('error-container').classList.remove('hidden');
-                document.getElementById('error-container').innerText = "Error: No Certificate ID provided in the link.";
+                document.getElementById('error-container').innerText = " Please enter a Certificate ID or use a valid link.";
                 return;
             }
 
             try {
-                // Firestore-এর 'certificates' কালেকশন থেকে সার্চ করা
-                const docRef = await db.collection("certificates").doc(certId).get();
-                
-                document.getElementById('loading').classList.add('hidden');
+                // Firestore 'certificates' কালেকশন থেকে ডাটা রিড করা
+                const docRef = doc(db, "certificates", idToSearch.trim());
+                const docSnap = await getDoc(docRef);
 
-                if (docRef.exists) {
-                    const data = docRef.data();
-                    document.getElementById('cert-id').innerText = certId;
-                    document.getElementById('cert-name').innerText = data.userName;
-                    document.getElementById('cert-course').innerText = data.courseTitle;
-                    document.getElementById('cert-date').innerText = data.issueDate;
-                    
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('search-box').classList.remove('hidden');
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('cert-id').innerText = idToSearch.trim();
+                    document.getElementById('cert-name').innerText = data.userName || data.name || "N/A";
+                    document.getElementById('cert-course').innerText = data.courseTitle || data.course || "N/A";
+                    document.getElementById('cert-date').innerText = data.issueDate || data.date || "N/A";
+
                     document.getElementById('result-container').classList.remove('hidden');
                 } else {
                     document.getElementById('error-container').classList.remove('hidden');
+                    document.getElementById('error-container').innerText = `❌ No certificate found for ID: ${idToSearch}`;
                 }
             } catch (error) {
                 console.error("Error fetching certificate:", error);
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('error-container').classList.remove('hidden');
-                document.getElementById('error-container').innerText = "Database connection error!";
+                document.getElementById('error-container').innerText = "⚠️ Database connection error! Please check rules or internet.";
             }
         }
 
+        // Event Listener for Manual Search Button
+        document.getElementById('search-btn').addEventListener('click', () => {
+            const inputVal = document.getElementById('manual-cert-id').value;
+            if (inputVal) {
+                verifyCertificate(inputVal);
+            }
+        });
+
+        // Initial Run
         verifyCertificate();
     </script>
 </body>
